@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: smartcity_db
+    environment:
+      POSTGRES_USER: your_db_username_here
+      POSTGRES_PASSWORD: your_db_password_here
+      POSTGRES_DB: smart_city    # ← Changed from smartcity
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Don't auto-run schema.sql since you already have the DB
+      # - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - smartcity_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smartcity_backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: your_db_username_here
+      DB_PASSWORD: your_db_password_here
+      DB_NAME: smart_city      # ← Changed from smartcity
+      PORT: 8080
+      JWT_SECRET: your-super-secret-jwt-key
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - smartcity_network
+
+volumes:
+  postgres_data:
+
+networks:
+  smartcity_network:
+    driver: bridge
