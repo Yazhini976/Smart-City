@@ -22,12 +22,37 @@ class ReportIssueScreen extends StatefulWidget {
 }
 
 class _ReportIssueScreenState extends State<ReportIssueScreen> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  String? _selectedIssue;
+  final TextEditingController _otherDescriptionController = TextEditingController();
   File? _selectedImage;
   String? _photoUrl;
   bool _isLoading = false;
   String _selectedImageSource = 'Camera';
+
+  List<String> get _predefinedIssues {
+    switch (widget.moduleId) {
+      case 1: // Water Utility
+        return ['Pipeline Leakage', 'No Water Supply', 'Dirty Water Supply', 'Low Water Pressure', 'Others'];
+      case 2: // Solar Power
+        return ['Panel Damage', 'Inverter Failure', 'Grid Sync Issue', 'Others'];
+      case 3: // Pollution Monitoring
+        return ['High AQI Alert', 'Industrial Smoke', 'Chemical Odor', 'Others'];
+      case 4: // Vehicle Tracking
+        return ['Bus Delay', 'Tracking Offline', 'Driver Rash Driving', 'Others'];
+      case 5: // Water Body Levels
+        return ['Lake Overflow', 'Water Contamination', 'Encroachment', 'Others'];
+      case 6: // Garbage Monitoring
+        return ['Overflowing Bin', 'Garbage Truck Skipped', 'Dead Animal', 'Others'];
+      case 7: // Smart Lighting
+        return ['Streetlight Not Working', 'Daytime Burning', 'Flickering Light', 'Others'];
+      case 8: // Weather Sensors
+        return ['Sensor Damage', 'Incorrect Readings', 'Others'];
+      case 9: // UGSS Monitoring
+        return ['Sewage Blockage', 'Manhole Overflow', 'Bad Odor', 'Others'];
+      default:
+        return ['General Issue', 'Others'];
+    }
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -41,11 +66,24 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   }
 
   Future<void> _submitComplaint() async {
-    if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
+    if (_selectedIssue == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
+        const SnackBar(content: Text('Please select an issue type')),
       );
       return;
+    }
+
+    final title = _selectedIssue!;
+    String description = title;
+
+    if (title == 'Others') {
+      if (_otherDescriptionController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please describe the issue')),
+        );
+        return;
+      }
+      description = _otherDescriptionController.text.trim();
     }
 
     setState(() => _isLoading = true);
@@ -58,12 +96,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         'street': widget.address['street'] ?? '',
         'area': widget.address['area'] ?? '',
         'city': widget.address['city'] ?? '',
-        'title': _titleController.text,
-        'description': _descriptionController.text,
+        'title': title,
+        'description': description,
         'photo_url': _photoUrl ?? '',
       };
 
-      // ✅ FIXED: No second argument needed
       final response = await ApiService.createComplaint(data);
 
       if (context.mounted) {
@@ -88,11 +125,15 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final issuesList = _predefinedIssues;
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Report Issue'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -100,48 +141,104 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Location info
+              // Location info card
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('📍 Location Details', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
+                    const Row(
+                      children: [
+                        Icon(Icons.location_on, color: Colors.blue, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Location Details',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
                     Text('Street: ${widget.address['street'] ?? 'N/A'}'),
+                    const SizedBox(height: 4),
                     Text('Area: ${widget.address['area'] ?? 'N/A'}'),
+                    const SizedBox(height: 4),
                     Text('City: ${widget.address['city'] ?? 'N/A'}'),
+                    const SizedBox(height: 4),
                     Text('Ward: ${widget.address['ward'] ?? 'N/A'}'),
-                    Text('Lat/Lng: ${widget.position.latitude}, ${widget.position.longitude}'),
+                    const SizedBox(height: 4),
+                    Text('Coordinates: ${widget.position.latitude.toStringAsFixed(6)}, ${widget.position.longitude.toStringAsFixed(6)}'),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _titleController,
+              const SizedBox(height: 20),
+
+              // Issue Selection Dropdown
+              const Text(
+                'Select Issue Type *',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedIssue,
+                hint: const Text('Choose the issue you are facing'),
                 decoration: const InputDecoration(
-                  labelText: 'Issue Title *',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.title),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: Icon(Icons.error_outline),
                 ),
+                items: issuesList.map((issue) {
+                  return DropdownMenuItem<String>(
+                    value: issue,
+                    child: Text(issue),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedIssue = val;
+                  });
+                },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description *',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
+
+              // Conditional description input field (only shown if "Others" is selected)
+              if (_selectedIssue == 'Others') ...[
+                const Text(
+                  'Describe the issue *',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _otherDescriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Specify the problem details',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixIcon: Icon(Icons.description),
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Photo section
-              const Text('Attach Photo', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Attach Photo (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -150,6 +247,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                       onPressed: () => _pickImage(ImageSource.camera),
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('Camera'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -158,6 +258,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                       onPressed: () => _pickImage(ImageSource.gallery),
                       icon: const Icon(Icons.photo_library),
                       label: const Text('Gallery'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
                 ],
@@ -165,15 +268,25 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
               if (_selectedImage != null) ...[
                 const SizedBox(height: 12),
                 Container(
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
-                      Image.file(_selectedImage!, height: 150, fit: BoxFit.cover),
-                      const SizedBox(height: 4),
-                      Text('Source: $_selectedImageSource'),
+                      Image.file(_selectedImage!, height: 160, width: double.infinity, fit: BoxFit.cover),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        color: Colors.grey.shade100,
+                        width: double.infinity,
+                        child: Text(
+                          'Attached via $_selectedImageSource',
+                          style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -193,7 +306,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Submit Complaint', style: TextStyle(fontSize: 18)),
+                      : const Text('Submit Complaint', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
