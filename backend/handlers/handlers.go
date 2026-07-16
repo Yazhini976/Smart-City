@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/dchest/captcha"
 
 	"smartcity/db"
 	"smartcity/models"
@@ -20,11 +22,31 @@ func generateOTP() string {
 	return fmt.Sprintf("%06d", rand.Intn(1000000))
 }
 
+// Get Captcha (server-side graphical image)
+func GetCaptcha(c *gin.Context) {
+	id := captcha.NewLen(6) // Generates a 6-digit captcha
+	var buf bytes.Buffer
+	if err := captcha.WriteImage(&buf, id, 240, 80); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to render captcha"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"captcha_id":  id,
+		"image_bytes": buf.Bytes(), // gin automatically encodes []byte as base64 string
+	})
+}
+
 // Send OTP to terminal (for testing)
 func SendOTP(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verify captcha server-side
+	if !captcha.VerifyString(req.CaptchaID, req.CaptchaAnswer) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect CAPTCHA"})
 		return
 	}
 
@@ -245,6 +267,19 @@ func UpdateWorkOrder(c *gin.Context) {
 		return
 	}
 
+	// Send feedback notification if the status was marked completed
+	if req.Status == "completed" || req.Status == "COMPLETED" {
+		var userPhone, reason string
+		err := db.DB.QueryRow(`SELECT user_phone, reason FROM complaints WHERE complaint_id = $1`, id).Scan(&userPhone, &reason)
+		if err == nil {
+			fmt.Printf("\n======================================================================\n")
+			fmt.Printf("💬 SMS sent to %s:\n", userPhone)
+			fmt.Printf("Dear Citizen, your complaint regarding '%s' has been COMPLETED.\n", reason)
+			fmt.Printf("Please share your feedback at: http://192.168.0.21:8081/api/feedback/%s\n", id.String())
+			fmt.Printf("======================================================================\n\n")
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Work order updated successfully"})
 }
 
@@ -272,4 +307,35 @@ func LookupWard(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"ward_no": wardNo,
 	})
+}
+
+// Get Feedback HTML Page
+func GetFeedbackPage(c *gin.Context) {
+	id := c.Param("id")
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, fmt.Sprintf(`
+		<html>
+			<head>
+				<title>Complaint Feedback</title>
+				<meta name="viewport" content="width=device-width, initial-scale=1">
+				<style>
+					body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f1f5f9; }
+					.card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); text-align: center; max-width: 400px; width: 90%%; }
+					h1 { color: #1e3a8a; margin-top: 0; }
+					p { color: #475569; }
+					textarea { width: 100%%; height: 100px; margin: 1rem 0; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; box-sizing: border-box; }
+					button { background: #1e3a8a; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+				</style>
+			</head>
+			<body>
+				<div class="card">
+					<h1>Complaint Feedback</h1>
+					<p>Complaint ID: %s</p>
+					<p>How would you rate the resolution of your complaint?</p>
+					<textarea placeholder="Write your feedback here..."></textarea>
+					<button onclick="alert('Thank you for your feedback!')">Submit Feedback</button>
+				</div>
+			</body>
+		</html>
+	`, id))
 }

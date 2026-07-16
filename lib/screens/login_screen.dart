@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'otp_screen.dart';
@@ -13,25 +14,36 @@ class _LoginScreenState extends State<LoginScreen> {
   final _mobileController = TextEditingController();
   final _captchaController = TextEditingController();
 
-  String _captchaText = '';
+  String? _captchaId;
+  String? _captchaImageBase64;
+  bool _loadingCaptcha = true;
   bool _submitting = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _generateCaptcha();
+    _fetchCaptcha();
   }
 
-  void _generateCaptcha() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
+  Future<void> _fetchCaptcha() async {
     setState(() {
-      _captchaText = List.generate(
-        6,
-            (index) => chars[(DateTime.now().microsecondsSinceEpoch + index) % chars.length],
-      ).join();
+      _loadingCaptcha = true;
+      _error = null;
     });
+    try {
+      final data = await ApiService.getCaptcha();
+      setState(() {
+        _captchaId = data['captcha_id'];
+        _captchaImageBase64 = data['image_bytes'];
+        _loadingCaptcha = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Cannot load captcha. Make sure backend is running.';
+        _loadingCaptcha = false;
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -42,9 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = 'Enter a valid 10-digit mobile number');
       return;
     }
-    if (captchaAnswer.toUpperCase() != _captchaText) {
-      setState(() => _error = 'Invalid CAPTCHA');
-      _generateCaptcha();
+    if (_captchaId == null || captchaAnswer.isEmpty) {
+      setState(() => _error = 'Please enter CAPTCHA');
       return;
     }
 
@@ -54,14 +65,18 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await ApiService.sendOTP(mobile);
+      await ApiService.sendOTP(
+        mobileNumber: mobile,
+        captchaId: _captchaId!,
+        captchaAnswer: captchaAnswer,
+      );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => OtpScreen(mobileNumber: mobile)),
       );
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
-      _generateCaptcha(); // fetch a fresh captcha after a failed attempt
+      _fetchCaptcha(); // fetch a fresh captcha after a failed attempt
       _captchaController.clear();
     } finally {
       setState(() => _submitting = false);
@@ -112,29 +127,35 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text('Captcha', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 Container(
-                  height: 70,
+                  height: 75,
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade400),
                     borderRadius: BorderRadius.circular(6),
+                    color: Colors.white,
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: Row(
                     children: [
-                  Expanded(
-                  child: Center(
-                  child: Text(
-                    _captchaText,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                ),
-          ),
+                      Expanded(
+                        child: Center(
+                          child: _loadingCaptcha
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1E3A8A)),
+                                )
+                              : _captchaImageBase64 != null
+                                  ? Image.memory(
+                                      base64Decode(_captchaImageBase64!),
+                                      fit: BoxFit.contain,
+                                    )
+                                  : const Text('Failed to load image', style: TextStyle(color: Colors.red, fontSize: 12)),
+                        ),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         tooltip: 'Get a new captcha',
-                        onPressed: _generateCaptcha,
+                        onPressed: _loadingCaptcha ? null : _fetchCaptcha,
                       ),
                     ],
                   ),

@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:water_utility_module/screens/modules_screen.dart';
 import '../models/module.dart';
 import '../widgets/module_card.dart';
 import 'login_screen.dart';
+import 'modules_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   final String role; // 'citizen' or 'staff'
   const DashboardScreen({super.key, required this.role});
 
   void _openModule(BuildContext context, CityModule module) {
+    if (module.key == 'solar' || module.key == 'garbage') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${module.title} module is currently under maintenance.'),
+          backgroundColor: Colors.orange.shade800,
+        ),
+      );
+      return;
+    }
+
     int moduleId;
     switch (module.key) {
       case 'water':

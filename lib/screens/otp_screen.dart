@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:water_utility_module/screens/officer_dashboard.dart';
-import 'package:water_utility_module/services/auth_service.dart';
-import 'package:water_utility_module/services/api_service.dart' as module_api;
+import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import 'dashboard_screen.dart';
+import 'officer_dashboard.dart';
 
 class OtpScreen extends StatefulWidget {
   final String mobileNumber;
@@ -112,20 +111,19 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   void _goToDashboard(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    final userId = prefs.getInt('user_id') ?? 0;
+    ApiService.setAuth('dummy-token-$userId', userId);
+
+    final auth = Provider.of<AuthService>(context, listen: false);
+    auth.setSession(userId, widget.mobileNumber, role);
+
     if (role == 'officer') {
-      final prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
-
-      // Set auth credentials on the module's ApiService so API calls work
-      final userId = prefs.getInt('user_id') ?? 0;
-      module_api.ApiService.setAuth('dummy-token-$userId', userId);
-
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider(
-            create: (_) => AuthService(prefs),
-            child: const OfficerDashboard(),
-          ),
+          builder: (_) => const OfficerDashboard(),
         ),
         (route) => false,
       );
@@ -157,15 +155,9 @@ class _OtpScreenState extends State<OtpScreen> {
                 const Icon(Icons.sms_outlined, size: 56, color: Color(0xFF1E3A8A)),
                 const SizedBox(height: 12),
                 Text(
-                  'Enter the 6-digit code sent to +91 ${widget.mobileNumber}',
+                  'Enter the 6-digit code sent to ${widget.mobileNumber}',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 15, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '(check backend terminal for OTP code)',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
                 ),
                 const SizedBox(height: 24),
                 TextField(

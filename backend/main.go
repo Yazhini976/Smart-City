@@ -39,8 +39,10 @@ func main() {
     })
 
     // Public routes (NO AUTH)
+    r.GET("/api/auth/captcha", handlers.GetCaptcha)
     r.POST("/api/auth/send-otp", handlers.SendOTP)
     r.POST("/api/auth/verify-otp", handlers.VerifyOTP)
+    r.GET("/api/feedback/:id", handlers.GetFeedbackPage)
     r.GET("/api/modules", handlers.GetModules)  // ← MOVED TO PUBLIC
     r.GET("/api/wards/lookup", handlers.LookupWard)
 

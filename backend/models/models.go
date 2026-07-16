@@ -75,7 +75,9 @@ type WorkOrder struct {
 }
 
 type LoginRequest struct {
-	PhoneNumber string `json:"phone_number" binding:"required"`
+	PhoneNumber   string `json:"phone_number" binding:"required"`
+	CaptchaID     string `json:"captcha_id" binding:"required"`
+	CaptchaAnswer string `json:"captcha_answer" binding:"required"`
 }
 
 type OTPRequest struct {

@@ -135,7 +135,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_dotenv:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_dotenv
       sha256: b7c7be5cd9f6ef7a78429cabd2774d3c4af50e79cb2b7593e3d5d763ef95c61b
@@ -169,7 +169,7 @@ packages:
     source: sdk
     version: "0.0.0"
   geocoding:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: geocoding
       sha256: "790eea732b22a08dd36fc3761bcd29040461ac20ece4d165264a6c0b5338f115"
@@ -201,7 +201,7 @@ packages:
     source: hosted
     version: "3.2.0"
   geolocator:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: geolocator
       sha256: f4efb8d3c4cdcad2e226af9661eb1a0dd38c71a9494b22526f9da80ab79520e5
@@ -265,7 +265,7 @@ packages:
     source: hosted
     version: "4.1.2"
   image_picker:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: image_picker
       sha256: d8402284df184bc05f4a2210c6c23983b0720f4cd87cbd05c5390a78af602667
@@ -597,13 +597,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.2.0"
-  water_utility_module:
-    dependency: "direct main"
-    description:
-      path: "frontend/water_utility_module"
-      relative: true
-    source: path
-    version: "1.0.0+1"
   web:
     dependency: transitive
     description:
