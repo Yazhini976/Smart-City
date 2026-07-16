@@ -161,8 +161,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your phone number';
                     }
-                    if (value.length < 10) {
-                      return 'Phone number must be 10 digits';
+                    if (value.length != 10) {
+                      return 'Phone number must be exactly 10 digits';
+                    }
+                    if (!RegExp(r'^[6-9]').hasMatch(value)) {
+                      return 'Must start with 6, 7, 8, or 9';
                     }
                     if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
                       return 'Only numbers allowed';

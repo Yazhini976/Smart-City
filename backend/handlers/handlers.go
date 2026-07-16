@@ -50,6 +50,12 @@ func SendOTP(c *gin.Context) {
 		return
 	}
 
+	// Validate phone number (starts with 6,7,8,9 and length 10)
+	if len(req.PhoneNumber) != 10 || req.PhoneNumber[0] < '6' || req.PhoneNumber[0] > '9' {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number. Must be 10 digits and start with 6, 7, 8, or 9."})
+		return
+	}
+
 	otp := generateOTP()
 	otpStore[req.PhoneNumber] = otp
 
@@ -275,7 +281,7 @@ func UpdateWorkOrder(c *gin.Context) {
 			fmt.Printf("\n======================================================================\n")
 			fmt.Printf("💬 SMS sent to %s:\n", userPhone)
 			fmt.Printf("Dear Citizen, your complaint regarding '%s' has been COMPLETED.\n", reason)
-			fmt.Printf("Please share your feedback at: http://192.168.0.21:8081/api/feedback/%s\n", id.String())
+			fmt.Printf("Please share your feedback at: http://172.16.147.44:8081/api/feedback/%s\n", id.String())
 			fmt.Printf("======================================================================\n\n")
 		}
 	}

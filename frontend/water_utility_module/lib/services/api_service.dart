@@ -9,12 +9,12 @@ class ApiService {
   static String get baseUrl {
     if (_baseUrlOverride != null) return _baseUrlOverride!;
     try {
-      final url = dotenv.env['API_URL'] ?? 'http://192.168.0.21:8081/api';
+      final url = dotenv.env['API_URL'] ?? 'http://172.16.147.44:8081/api';
       print('🌐 Using API_URL: $url');
       return url;
     } catch (_) {
       // dotenv not loaded (e.g. launched from container app)
-      return 'http://192.168.0.21:8081/api';
+      return 'http://172.16.147.44:8081/api';
     }
   }
 

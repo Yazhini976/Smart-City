@@ -50,8 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final mobile = _mobileController.text.trim();
     final captchaAnswer = _captchaController.text.trim();
 
-    if (mobile.length != 10) {
-      setState(() => _error = 'Enter a valid 10-digit mobile number');
+    if (mobile.length != 10 || !RegExp(r'^[6-9]').hasMatch(mobile)) {
+      setState(() => _error = 'Enter a valid 10-digit mobile number starting with 6,7,8,9');
       return;
     }
     if (_captchaId == null || captchaAnswer.isEmpty) {
